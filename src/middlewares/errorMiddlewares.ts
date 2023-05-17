@@ -1,9 +1,10 @@
 import "../loadEnvironments.js";
 import createDebug from "debug";
+import { ValidationError } from "express-validation";
 import RobotError from "../routers/RobotError.js";
 import { type NextFunction, type Request, type Response } from "express";
 
-const debugError = createDebug("robots-api:server:middleware:errorMiddlewares");
+const debug = createDebug("robots-api:server:middleware:errorMiddlewares");
 
 export const notFoundError = (
   req: Request,
@@ -20,8 +21,18 @@ export const genericError = (
   res: Response,
   _next: NextFunction
 ) => {
-  debugError(error.message);
+  debug(error.message);
   const statusCode = error.statusCode || 500;
+
+  if (error instanceof ValidationError) {
+    const validationError = error.details
+      .body!.map((joiError) => joiError.message)
+      .join(" & ")
+      .replaceAll("\\/", "");
+    const publicError = validationError;
+    debug(publicError);
+  }
+
   const message = error.statusCode ? error.message : "Internal Server Error";
 
   res.status(statusCode).json({ message });
